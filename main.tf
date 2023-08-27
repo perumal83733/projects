@@ -51,6 +51,7 @@ resource "aws_route_table_association" "to_public_subnet1" {
 
 resource "aws_security_group" "instance_sg" {
   name_prefix = "instance-sg-"
+  vpc_id     = aws_vpc.my_vpc.id
 
   # SSH rule
   ingress {
