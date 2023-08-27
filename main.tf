@@ -107,6 +107,7 @@ resource "aws_lb" "AppLB" {
   internal           = false
   load_balancer_type = "application"
   subnets            = [aws_subnet.public_subnet_1.id]  # List all public subnets
+   subnets            = [aws_subnet.public_subnet_2.id]
   
 
   enable_deletion_protection = false  # Remember to adjust this based on your requirements
@@ -130,7 +131,7 @@ resource "aws_autoscaling_group" "AppASG" {
 
 resource "aws_launch_configuration" "AppLaunchConfig" {
   name_prefix          = "AppLaunchConfigName"
-  image_id             = "ami-0cf0e376c672104d6"  # Replace with your desired AMI ID
+  image_id             = "ami-06f621d90fa29f6d0"  # Replace with your desired AMI ID
   instance_type       = "t2.micro"      # Replace with your desired instance type
   security_groups     = [aws_security_group.instance_sg.name]
   associate_public_ip_address = true   # If needed, for instances in public subnet
