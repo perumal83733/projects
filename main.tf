@@ -109,7 +109,7 @@ resource "aws_lb" "AppLB" {
   load_balancer_type = "application"
   security_groups     = [aws_security_group.instance_sg.id]
   
-    subnets = [aws_subnet.public_subnet_1.id,aws_subnet.public_subnet_2.id]
+  subnets = [aws_subnet.public_subnet_1.id,aws_subnet.public_subnet_2.id]
   
 
   enable_deletion_protection = false  # Remember to adjust this based on your requirements
