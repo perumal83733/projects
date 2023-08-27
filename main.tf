@@ -1,67 +1,33 @@
-data "aws_availability_zones" "available" {
-  state = "available"
+provider "aws" {
+  region = "ap-south-1"  # Choose the appropriate region
 }
 
-# Main  vpc
 resource "aws_vpc" "my_vpc" {
-  cidr_block       = var.VPC_CIDR_BLOCk
-  enable_dns_support = "true"
-  enable_dns_hostnames = "true"
-  tags = {
-    Name = "${var.ENVIRONMENT}-vpc"
-  }
+  cidr_block = "10.0.0.0/16"
 }
-#public Subnet
+
 resource "aws_subnet" "public_subnet_1" {
   vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = var.PUBLIC_SUBNET1_CIDR_BLOCK
-  availability_zone = data.aws_availability_zones.available.names[0]
-  map_public_ip_on_launch = "true"
-  tags = {
-    Name = "${var.ENVIRONMENT}-vpc-public-subnet-1"
-  }
+  cidr_block = "10.0.1.0/24"
+  availability_zone = "ap-south-1a"  # Choose the appropriate AZ
 }
+
 resource "aws_subnet" "public_subnet_2" {
   vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = var.PUBLIC_SUBNET2_CIDR_BLOCK
-  availability_zone = data.aws_availability_zones.available.names[1]
-  map_public_ip_on_launch = "true"
-  tags = {
-    Name = "${var.ENVIRONMENT}-vpc-public-subnet-1"
-  }
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "ap-south-1b"  # Choose the appropriate AZ
 }
 
-# Route Table for public Architecture
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.my_vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-  }
+resource "aws_security_group" "public_sg" {
+  name_prefix = "public-sg-"
 
-  tags = {
-    Name = "${var.ENVIRONMENT}-route-table"
-  }
-}
-
-# Route Table association with public subnets
-resource "aws_route_table_association" "to_public_subnet1" {
-  subnet_id      = aws_subnet.public_subnet_1.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_security_group" "instance_sg" {
-  name_prefix = "instance-sg-"
-  vpc_id     = aws_vpc.my_vpc.id
-
-  # SSH rule
+  // Inbound rule to allow incoming SSH and HTTP traffic
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Additional rule for port 5000
   ingress {
     from_port   = 5000
     to_port     = 5000
@@ -69,78 +35,70 @@ resource "aws_security_group" "instance_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Add more rules as needed for your application
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-
-
-provider "aws" {
-  region     = var.AWS_REGION
-  access_key = "AKIAXVZN56GWENRNDR6D"
-  secret_key = "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"
-}
-
-#Output Specific to Custom VPC
-output "my_vpc_id" {
-  description = "VPC ID"
-  value       = aws_vpc.my_vpc.id
-}
-
-
-
-output "public_subnet1_id" {
-  description = "Subnet ID"
-  value       = aws_subnet.public_subnet_1.id
-}
-
-resource "aws_instance" "PerumalEC2" {
-  ami           = "ami-06f621d90fa29f6d0"  # Replace with your desired AMI ID
-  instance_type = "t2.micro"      # Replace with your desired instance type
-  key_name = "my"
+resource "aws_instance" "ec2_instance_1" {
+  ami           = "ami-06f621d90fa29f6d0"  # Specify a valid AMI ID
+  instance_type = "t2.micro"
   subnet_id     = aws_subnet.public_subnet_1.id
-  tags = {
-    Name = "PerumalEC2"
+  security_groups = [aws_security_group.public_sg.id]
+  key_name      = "my" 
+}
+
+
+
+resource "aws_instance" "ec2_instance_2" {
+  ami           = "ami-06f621d90fa29f6d0"  # Specify a valid AMI ID
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.public_subnet_2.id
+  security_groups = [aws_security_group.public_sg.id]
+  key_name      = "my"  # Replace with your actual key pair name
+}
+resource "aws_security_group" "elb_sg" {
+  name_prefix = "elb-sg-"
+
+  // Inbound rule to allow incoming HTTP traffic
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-resource "aws_lb" "AppLB" {
-  name               = "AppLoadbalancer"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups     = [aws_security_group.instance_sg.id]
-  
-  subnets = [aws_subnet.public_subnet_1.id,aws_subnet.public_subnet_2.id]
-  
-
-  enable_deletion_protection = false  # Remember to adjust this based on your requirements
-
-  enable_http2 = true  # Optional: Enable HTTP/2 support
-
-  tags = {
-    Name = "App Load Balancer"
-  }
+resource "aws_launch_configuration" "my_lc" {
+  name_prefix   = "my-lc-"
+  image_id      = "ami-06f621d90fa29f6d0"  # Specify a valid AMI ID
+  instance_type = "t2.micro"
+  security_groups = [aws_security_group.public_sg.name]
 }
 
-
-resource "aws_autoscaling_group" "AppASG" {
-  name                 = "AppAutoScaling"
-  launch_configuration = aws_launch_configuration.AppLaunchConfig.name
-  min_size             = 1
-  max_size             = 2
-  desired_capacity     = 1
-
-  vpc_zone_identifier = [aws_subnet.public_subnet_1.id]  # List all public subnets
+resource "aws_autoscaling_group" "my_asg" {
+  name_prefix           = "my-asg-"
+  launch_configuration = aws_launch_configuration.my_lc.name
+  min_size             = 2
+  max_size             = 5
+  desired_capacity     = 2
+  health_check_type    = "ELB"
+  load_balancers       = [aws_elb.my_elb.name]
+  vpc_zone_identifier  = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
 }
 
-resource "aws_launch_configuration" "AppLaunchConfig" {
-  name_prefix          = "AppLaunchConfigName"
-  image_id             = "ami-06f621d90fa29f6d0"  # Replace with your desired AMI ID
-  instance_type       = "t2.micro"      # Replace with your desired instance type
-  security_groups     = [aws_security_group.instance_sg.id]
-  associate_public_ip_address = true   # If needed, for instances in public subnet
-
-  lifecycle {
-    create_before_destroy = true
+resource "aws_elb" "my_elb" {
+  name               = "my-elb"
+  security_groups   = [aws_security_group.elb_sg.id]
+  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+  listener {
+    instance_port     = 80
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
   }
 }
 
