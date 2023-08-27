@@ -137,7 +137,7 @@ resource "aws_launch_configuration" "AppLaunchConfig" {
   name_prefix          = "AppLaunchConfigName"
   image_id             = "ami-06f621d90fa29f6d0"  # Replace with your desired AMI ID
   instance_type       = "t2.micro"      # Replace with your desired instance type
-  security_groups     = [aws_security_group.instance_sg.name]
+  security_groups     = [aws_security_group.instance_sg.id]
   associate_public_ip_address = true   # If needed, for instances in public subnet
 
   lifecycle {
