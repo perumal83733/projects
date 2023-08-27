@@ -21,6 +21,15 @@ resource "aws_subnet" "public_subnet_1" {
     Name = "${var.ENVIRONMENT}-vpc-public-subnet-1"
   }
 }
+resource "aws_subnet" "public_subnet_2" {
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = var.PUBLIC_SUBNET2_CIDR_BLOCK
+  availability_zone = data.aws_availability_zones.available.names[1]
+  map_public_ip_on_launch = "true"
+  tags = {
+    Name = "${var.ENVIRONMENT}-vpc-public-subnet-1"
+  }
+}
 
 # Route Table for public Architecture
 resource "aws_route_table" "public" {
@@ -98,6 +107,7 @@ resource "aws_lb" "AppLB" {
   internal           = false
   load_balancer_type = "application"
   subnets            = [aws_subnet.public_subnet_1.id]  # List all public subnets
+  
 
   enable_deletion_protection = false  # Remember to adjust this based on your requirements
 
