@@ -106,8 +106,11 @@ resource "aws_lb" "AppLB" {
   name               = "AppLoadbalancer"
   internal           = false
   load_balancer_type = "application"
-  subnets            = [aws_subnet.public_subnet_1.id]  # List all public subnets
-   
+  
+    subnets = [
+    aws_subnet.public_subnet_1.id,
+    aws_subnet.public_subnet_2.id,
+  ]
   
 
   enable_deletion_protection = false  # Remember to adjust this based on your requirements
@@ -118,22 +121,7 @@ resource "aws_lb" "AppLB" {
     Name = "App Load Balancer"
   }
 }
-resource "aws_lb" "AppLB1" {
-  name               = "AppLoadbalancer"
-  internal           = false
-  load_balancer_type = "application"
-  subnets            = [aws_subnet.public_subnet_2.id]  # List all public subnets
-   
-  
 
-  enable_deletion_protection = false  # Remember to adjust this based on your requirements
-
-  enable_http2 = true  # Optional: Enable HTTP/2 support
-
-  tags = {
-    Name = "App Load Balancer-1"
-  }
-}
 
 resource "aws_autoscaling_group" "AppASG" {
   name                 = "AppAutoScaling"
