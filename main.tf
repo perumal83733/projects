@@ -107,10 +107,11 @@ resource "aws_lb" "AppLB" {
   name               = "AppLoadbalancer"
   internal           = false
   load_balancer_type = "application"
+  security_groups     = [aws_security_group.instance_sg.id]
   
     subnets = [
-    aws_subnet.public_subnet_1.id,
-    aws_subnet.public_subnet_2.id,
+    "aws_subnet.public_subnet_1.id",
+    "aws_subnet.public_subnet_2.id",
   ]
   
 
